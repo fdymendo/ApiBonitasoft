@@ -1,5 +1,6 @@
 package com.fdymendo.apibonitasoft.service;
 
+import org.springframework.http.ResponseEntity;
 import com.fdymendo.apibonitasoft.model.Input;
 import com.fdymendo.apibonitasoft.model.Token;
 
@@ -11,6 +12,6 @@ public interface BonitasoftService {
 
   public void createProcess(Token token, String id, Input input);
 
-  public void initProcess(Input input);
+  public ResponseEntity<String> initProcess(Input input);
 
 }

@@ -10,4 +10,6 @@ import lombok.NoArgsConstructor;
 public class Input {
 
   private BusinessInput businessInput;
+  private Publicar publicacionesInput;
+
 }

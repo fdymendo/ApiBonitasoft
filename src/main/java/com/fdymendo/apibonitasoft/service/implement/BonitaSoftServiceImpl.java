@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -26,10 +27,18 @@ public class BonitaSoftServiceImpl implements BonitasoftService {
   private ApplicationConfig applicationConfig;
 
   @Override
-  public void initProcess(Input input) {
-    Token token = getToken();
-    String id = getIdProcess(token);
-    createProcess(token, id, input);
+  public ResponseEntity<String> initProcess(Input input) {
+    try {
+      Token token = getToken();
+      String id = getIdProcess(token);
+      createProcess(token, id, input);
+    } catch (Exception e) {
+      log.info("Internal server error: {}", e);
+      return new ResponseEntity<String>("Error enviando mensaje: " + e.getMessage(),
+          HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    return new ResponseEntity<String>("Enviado correctamente", HttpStatus.OK);
   }
 
   @Override
@@ -45,15 +54,11 @@ public class BonitaSoftServiceImpl implements BonitasoftService {
 
     RestTemplate restTemplate = new RestTemplate();
     HttpEntity<Input> request = new HttpEntity<>(input, httpHeaders);
-    try {
-      String url = this.applicationConfig.getBonitaUrlCreateProcessPart1() + id
-          + this.applicationConfig.getBonitaUrlCreateProcessPart2();
-      ResponseEntity<Object> response =
-          restTemplate.exchange(url, HttpMethod.POST, request, Object.class);
-      log.info(response);
-    } catch (Exception e) {
-      log.error("error", e);
-    }
+    String url = this.applicationConfig.getBonitaUrlCreateProcessPart1() + id
+        + this.applicationConfig.getBonitaUrlCreateProcessPart2();
+    ResponseEntity<Object> response =
+        restTemplate.exchange(url, HttpMethod.POST, request, Object.class);
+    log.info(response);
 
 
   }
@@ -74,34 +79,30 @@ public class BonitaSoftServiceImpl implements BonitasoftService {
 
     Token token = new Token();
 
-    try {
-      ResponseEntity<Object> response = restTemplate.exchange(
-          this.applicationConfig.getBonitaUrlLogin(), HttpMethod.POST, entity, Object.class);
-      HttpHeaders headersresponse = response.getHeaders();
-      List<String> setCookie = headersresponse.get(HttpHeaders.SET_COOKIE);
-      String headerTenant = "";
-      String headerBos = "";
-      String headerJsessionid = "";
-      String headerToken = "";
-      for (String tmp : setCookie) {
-        log.info(tmp);
-        if (tmp.contains(this.applicationConfig.getHeaderTenant())) {
-          headerTenant = getHeader(tmp, this.applicationConfig.getHeaderTenant());
-        } else if (tmp.contains(this.applicationConfig.getHeaderBos())) {
-          headerBos = getHeader(tmp, this.applicationConfig.getHeaderBos());
-        } else if (tmp.contains(this.applicationConfig.getHeaderJsessionid())) {
-          headerJsessionid = getHeader(tmp, this.applicationConfig.getHeaderJsessionid());
-        } else if (tmp.contains(this.applicationConfig.getHeaderToken())) {
-          headerToken = getHeader(tmp, this.applicationConfig.getHeaderToken());
-        }
+    ResponseEntity<Object> response = restTemplate.exchange(
+        this.applicationConfig.getBonitaUrlLogin(), HttpMethod.POST, entity, Object.class);
+    HttpHeaders headersresponse = response.getHeaders();
+    List<String> setCookie = headersresponse.get(HttpHeaders.SET_COOKIE);
+    String headerTenant = "";
+    String headerBos = "";
+    String headerJsessionid = "";
+    String headerToken = "";
+    for (String tmp : setCookie) {
+      log.info(tmp);
+      if (tmp.contains(this.applicationConfig.getHeaderTenant())) {
+        headerTenant = getHeader(tmp, this.applicationConfig.getHeaderTenant());
+      } else if (tmp.contains(this.applicationConfig.getHeaderBos())) {
+        headerBos = getHeader(tmp, this.applicationConfig.getHeaderBos());
+      } else if (tmp.contains(this.applicationConfig.getHeaderJsessionid())) {
+        headerJsessionid = getHeader(tmp, this.applicationConfig.getHeaderJsessionid());
+      } else if (tmp.contains(this.applicationConfig.getHeaderToken())) {
+        headerToken = getHeader(tmp, this.applicationConfig.getHeaderToken());
       }
-      token.createCookie(headerTenant, headerBos, headerJsessionid, headerToken);
-      token.setToken(getHeaderToken(headerToken));
-      log.info(headersresponse);
-
-    } catch (Exception e) {
-      log.error("error", e);
     }
+    token.createCookie(headerTenant, headerBos, headerJsessionid, headerToken);
+    token.setToken(getHeaderToken(headerToken));
+    log.info(headersresponse);
+
     return token;
   }
 
@@ -134,20 +135,16 @@ public class BonitaSoftServiceImpl implements BonitasoftService {
 
 
     HttpEntity<Void> request = new HttpEntity<>(httpHeaders);
-    try {
-      String urlService = this.applicationConfig.getBonitaUrlSearchProcess()
-          .concat(this.applicationConfig.getProcessName());
-      @SuppressWarnings("rawtypes")
-      ResponseEntity<List> response =
-          restTemplate.exchange(urlService, HttpMethod.GET, request, List.class);
-      @SuppressWarnings("unchecked")
-      List<LinkedHashMap<String, String>> processDetails = response.getBody();
-      LinkedHashMap<String, String> processDetail = processDetails.get(0);
+    String urlService = this.applicationConfig.getBonitaUrlSearchProcess()
+        .concat(this.applicationConfig.getProcessName());
+    @SuppressWarnings("rawtypes")
+    ResponseEntity<List> response =
+        restTemplate.exchange(urlService, HttpMethod.GET, request, List.class);
+    @SuppressWarnings("unchecked")
+    List<LinkedHashMap<String, String>> processDetails = response.getBody();
+    LinkedHashMap<String, String> processDetail = processDetails.get(0);
 
-      processId = processDetail.get("id");
-    } catch (Exception e) {
-      log.error("error", e);
-    }
+    processId = processDetail.get("id");
     return processId;
   }
 
