@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class Input {
 
-  private BusinessInput businessInput;
   private Publicar publicacionesInput;
 
 }
